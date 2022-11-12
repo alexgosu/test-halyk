@@ -1,0 +1,32 @@
+version: "3"
+
+services:
+  hazelcast:
+    image: hazelcast/hazelcast:5.2.0-slim
+    environment:
+      HZ_NETWORK_PUBLICADDRESS: 127.0.0.1:5701
+
+  database:
+    image: postgres:15
+    volumes:
+      - ./sql:/docker-entrypoint-initdb.d
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: halykfinance
+
+  main-app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: "jdbc:postgresql://database:5432/halykfinance"
+      HZ_URL: "hazelcast:5701"
+      JOB_CRON: "0/30 * * * * *"
+    depends_on:
+      - hazelcast
+      - database
+
+
+
+

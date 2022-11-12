@@ -1,0 +1,24 @@
+spring:
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/halykfinance}
+    username: postgres
+    password: postgres
+    hikari:
+      minimum-idle: 1
+      maximum-pool-size: 10
+  jpa:
+    open-in-view: false
+
+
+application:
+  # расписание джоба обработки сообщений
+  msg-processor-cron: ${JOB_CRON:0/10 * * * * *}
+
+hazelcast:
+  cluster: ${HZ_CLUSTER:dev}
+  addresses: ${HZ_URL:127.0.0.1:5701}
+
+logging:
+  level:
+    root: INFO
+    net.javacrumbs.shedlock: DEBUG  # для demo
