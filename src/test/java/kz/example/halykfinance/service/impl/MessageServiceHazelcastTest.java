@@ -17,6 +17,7 @@ import org.springframework.test.util.ReflectionTestUtils;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.locks.ReentrantLock;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -60,6 +61,7 @@ class MessageServiceHazelcastTest {
         queue.add(new Message("login_2", "message_2"));
         queue.add(new Message("login_3", "message_3"));
         ReflectionTestUtils.setField(messageService, "queue", queue);
+        ReflectionTestUtils.setField(messageService, "lock", new ReentrantLock());
 
         when(clientDao.findByLogin("login_1"))
                 .thenReturn(Optional.of(getSampleClientEntity(1L)));

@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import javax.annotation.PostConstruct;
 import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.locks.Lock;
 
 @Service
 @Slf4j
@@ -24,10 +25,12 @@ public class MessageServiceHazelcast implements MessageService {
     private final MessageDao messageDao;
     private final HazelcastInstance hazelcastInstanceClient;
     private BlockingQueue<Message> queue;
+    private Lock lock;
 
     @PostConstruct
     private void init() {
         queue = hazelcastInstanceClient.getQueue("messagesQueue");
+        lock = hazelcastInstanceClient.getCPSubsystem().getLock("messagesLock");
     }
 
 
@@ -39,18 +42,26 @@ public class MessageServiceHazelcast implements MessageService {
 
     @Override
     public void processAllMessages() {
-        Message message;
-        while ((message = getMessage()) != null) {
-            log.info("Processing message body={}", message.getBody());
-            Optional<ClientEntity> client = clientDao.findByLogin(message.getLogin());
-            if (client.isPresent()) {
-                var messageEntity = new MessageEntity();
-                messageEntity.setBody(message.getBody());
-                messageEntity.setClient(client.get());
-                messageDao.save(messageEntity);
-            } else {
-                log.warn("Client not found, message dropped, login={}", message.getLogin());
+        if (lock.tryLock()) {
+            try {
+                Message message;
+                while ((message = getMessage()) != null) {
+                    log.info("Processing message body={}", message.getBody());
+                    Optional<ClientEntity> client = clientDao.findByLogin(message.getLogin());
+                    if (client.isPresent()) {
+                        var messageEntity = new MessageEntity();
+                        messageEntity.setBody(message.getBody());
+                        messageEntity.setClient(client.get());
+                        messageDao.save(messageEntity);
+                    } else {
+                        log.warn("Client not found, message dropped, login={}", message.getLogin());
+                    }
+                }
+            } finally {
+                lock.unlock();
             }
+        } else {
+            log.info("Thread is locked by other process");
         }
     }
 
